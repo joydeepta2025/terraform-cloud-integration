@@ -1,3 +1,34 @@
+resource "aws_lb" "web_lb" {
+  name               = "${local.project_tags.Name}-web-alb"
+  internal           = false         #this will be internet facing 
+  load_balancer_type = "application" #we are creating application lb
+  security_groups    = [aws_security_group.alb_sg.id]
+  subnets            = [for subnet in aws_subnet.web_subnet : subnet.id]
+
+  enable_deletion_protection = false
+
+
+
+  tags = {
+    Name = "${local.project_tags.Name}-web-sg"
+
+  }
+}
+
+output "alb_dns_name" {
+  value = aws_lb.web_lb.dns_name
+}
+#lets add the listener 
+resource "aws_lb_listener" "alb_listener" {
+  #this block will map your lb with target group
+  load_balancer_arn = aws_lb.web_lb.arn
+  port              = 80
+  protocol          = "HTTP"
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.web_tg.arn
+  }
+}
 #we will create target group and attach instances behind tf 
 resource "aws_lb_target_group" "web_tg" {
   name        = "${local.project_tags.Name}-web-alb-tg"
@@ -29,26 +60,4 @@ resource "aws_lb_target_group_attachment" "web_tg_attachement" {
   target_id        = each.value.id
 
   port = 80
-}
-
-#create a new file lb.tf copy from line 58 till 77 
-resource "aws_lb" "web_lb" {
-  name               = "${local.project_tags.Name}-web-alb"
-  internal           = false         #this will be internet facing 
-  load_balancer_type = "application" #we are creating application lb
-  security_groups    = [aws_security_group.alb_sg.id]
-  subnets            = [for subnet in aws_subnet.web_subnet : subnet.id]
-
-  enable_deletion_protection = false
-
-
-
-  tags = {
-    Name = "${local.project_tags.Name}-web-sg"
-
-  }
-}
-
-output "alb_dns_name" {
-  value = aws_lb.web_lb.dns_name
 }
